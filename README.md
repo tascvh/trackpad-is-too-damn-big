@@ -31,3 +31,42 @@ sudo  titdb -d /dev/input/event0
 ```
 Replace /dev/input/event0 with your trackpad device filename if necessary
 
+### Running without sudo
+
+TITDB needs to be able to access the `input` and `uinput` subsystem to work. To run TITDB without sudo, your user needs to have permissions. To achieve this, take the following steps:
+
+1. Make sure the `uinput` group exists
+```bash
+sudo groupadd --system uinput
+```
+
+The `--system` flag is needed for systemd.
+For other init systems, you may try to create the `uinput` group without `--system`. If this does not work, you can delete `uinput` group with `sudo groupdel uinput` and recreate the group with the `--system` flag.
+
+2. Add your user to the `input` and the `uinput` group:
+```bash
+sudo usermod -aG input,uinput username
+```
+
+Make sure that it's effective by running `groups`. You might have to logout and login.
+In some cases a reboot may also be required.
+
+3. Make sure the uinput device file has the right permissions:
+Add a udev rule (in either `/etc/udev/rules.d` or `/lib/udev/rules.d`) with the following content:
+```bash
+KERNEL=="uinput", MODE="0660", GROUP="uinput", OPTIONS+="static_node=uinput"
+```
+
+You will need to restart `udevd` via
+```bash
+sudo systemctl restart systemd-udevd.service
+```
+to get the new permissions.
+
+4. Make sure the `uinput` drivers are loaded.
+You will probably have to run this command whenever you start TITDB for the first time.
+```bash
+sudo modprobe uinput
+```
+
+Credit: https://github.com/kmonad/kmonad/blob/master/doc/faq.md#linux
